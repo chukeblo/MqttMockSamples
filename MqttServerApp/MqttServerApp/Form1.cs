@@ -1,4 +1,5 @@
 ﻿using MQTTnet;
+using MQTTnet.Client.Receiving;
 using MQTTnet.Server;
 using System;
 using System.Windows.Forms;
@@ -19,57 +20,93 @@ namespace MqttServerApp
             StartServer();
         }
 
+
         private async void StartServer()
         {
-            var optionsBuilder = new MqttServerOptionsBuilder()
-                .WithDefaultEndpoint().WithDefaultEndpointPort(1883).WithSubscriptionInterceptor(c =>
-                {
-                    c.AcceptSubscription = true;
-                })
-                .WithApplicationMessageInterceptor(c =>
-                {
-                    c.AcceptPublish = true;
-                });
-
-            mqttServer = new MqttFactory().CreateMqttServer() as MqttServer;
-            
-            mqttServer.StartedHandler = new MqttServerStartedHandlerDelegate(new Action<EventArgs>(e =>
+            if (this.mqttServer == null)
             {
-                this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                var optionsBuilder = new MqttServerOptionsBuilder()
+                                .WithDefaultEndpoint().WithDefaultEndpointPort(1883).WithSubscriptionInterceptor(c =>
+                                {
+                                    c.AcceptSubscription = true;
+                                })
+                                .WithApplicationMessageInterceptor(c =>
+                                {
+                                    c.AcceptPublish = true;
+                                });
+
+                mqttServer = new MqttFactory().CreateMqttServer() as MqttServer;
+
+                mqttServer.StartedHandler = new MqttServerStartedHandlerDelegate(new Action<EventArgs>(e =>
                 {
-                    this.currentConnectionStatusLabel.Text = "Disconnected";
+                    this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                    {
+                        this.currentConnectionStatusLabel.Text = "Disconnected";
+                    }));
                 }));
-            }));
 
-            mqttServer.StoppedHandler = new MqttServerStoppedHandlerDelegate(new Action<EventArgs>(e =>
-            {
-                this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                mqttServer.StoppedHandler = new MqttServerStoppedHandlerDelegate(new Action<EventArgs>(e =>
                 {
-                    this.currentConnectionStatusLabel.Text = "Stopped";
+                    this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                    {
+                        this.currentConnectionStatusLabel.Text = "Stopped";
+                    }));
                 }));
-            }));
 
-            mqttServer.ClientConnectedHandler = new MqttServerClientConnectedHandlerDelegate(new Action<EventArgs>(e =>
-            {
-                this.currentConnectionStatusLabel.BeginInvoke(new Action(() => 
+                mqttServer.ClientConnectedHandler = new MqttServerClientConnectedHandlerDelegate(new Action<MqttServerClientConnectedEventArgs>(e =>
                 {
-                    this.currentConnectionStatusLabel.Text = "Connected";
+                    this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                    {
+                        this.currentConnectionStatusLabel.Text = "Connected";
+                    }));
+                    this.logTextBox.BeginInvoke(new Action(() =>
+                    {
+                        this.logTextBox.Text += $"[ClientConnected] client id = {e.ClientId}, endpoint = {e.Endpoint}";
+                    }));
                 }));
-            }));
 
-            mqttServer.ClientDisconnectedHandler = new MqttServerClientDisconnectedHandlerDelegate(new Action<EventArgs>(e =>
-            {
-                this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                mqttServer.ClientDisconnectedHandler = new MqttServerClientDisconnectedHandlerDelegate(new Action<MqttServerClientDisconnectedEventArgs>(e =>
                 {
-                    this.currentConnectionStatusLabel.Text = "Disconnected";
+                    this.currentConnectionStatusLabel.BeginInvoke(new Action(() =>
+                    {
+                        this.currentConnectionStatusLabel.Text = "Disconnected";
+                    }));
+                    this.logTextBox.BeginInvoke(new Action(() =>
+                    {
+                        this.logTextBox.Text += $"[ClientDisconnected] client id = {e.ClientId}, endpoint = {e.Endpoint}, disconnect type = {e.DisconnectType}";
+                    }));
                 }));
-            }));
 
-            await mqttServer.StartAsync(optionsBuilder.Build());
-            this.logTextBox.BeginInvoke(new Action(() =>
-            {
-                this.logTextBox.Text += "MQTT Server is started." + Environment.NewLine;
-            }));
+                mqttServer.ClientSubscribedTopicHandler = new MqttServerClientSubscribedTopicHandlerDelegate(new Action<MqttServerClientSubscribedTopicEventArgs>(e =>
+                {
+                    this.logTextBox.BeginInvoke(new Action(() =>
+                    {
+                        this.logTextBox.Text += $"[ClientSubscribedTopic] client id = {e.ClientId}, topic = {e.TopicFilter}";
+                    }));
+                }));
+
+                mqttServer.ClientUnsubscribedTopicHandler = new MqttServerClientUnsubscribedTopicHandlerDelegate(new Action<MqttServerClientUnsubscribedTopicEventArgs>(e =>
+                {
+                    this.logTextBox.BeginInvoke(new Action(() =>
+                    {
+                        this.logTextBox.Text += $"[ClientUnsubscribedTopic] client id = {e.ClientId}, topic = {e.TopicFilter}";
+                    }));
+                }));
+
+                mqttServer.ApplicationMessageReceivedHandler = new MqttApplicationMessageReceivedHandlerDelegate(new Action<MqttApplicationMessageReceivedEventArgs>(e =>
+                {
+                    this.logTextBox.BeginInvoke(new Action(() =>
+                    {
+                        this.logTextBox.Text += $"[ApplicationMessageReceived] client id = {e.ClientId}, topic = {e.ApplicationMessage.Topic}, payload = {e.ApplicationMessage.Payload}";
+                    }));
+                }));
+
+                await mqttServer.StartAsync(optionsBuilder.Build());
+                this.logTextBox.BeginInvoke(new Action(() =>
+                {
+                    this.logTextBox.Text += "MQTT Server is started." + Environment.NewLine;
+                }));
+            }
         }
     }
 }

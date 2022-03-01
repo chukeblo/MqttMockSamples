@@ -2,6 +2,8 @@
 using MQTTnet.Client.Receiving;
 using MQTTnet.Server;
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Windows.Forms;
 
 namespace MqttServerApp
@@ -105,6 +107,20 @@ namespace MqttServerApp
                 this.logTextBox.BeginInvoke(new Action(() =>
                 {
                     this.logTextBox.Text += "MQTT Server is started." + Environment.NewLine;
+                }));
+
+
+                this.ipAddressLabel.BeginInvoke(new Action(() =>
+                {
+                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                    foreach (var ip in host.AddressList)
+                    {
+                        if (ip.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            this.ipAddressLabel.Text = ip.ToString();
+                        }
+                    }
+                    
                 }));
             }
         }

@@ -10,11 +10,11 @@ Visual Studio 2019
 - Microsoft.NetCore.App (v5.0.0)
 - MQTTnet (v3.1.2)
 
-## プロジェクト構成
-- MqttMockSamplesソリューション
-  - MqttBroker
-  - MqttPublisher
-  - MqttReceiver
+## ソリューション構成
+- MqttMockSamples.sln
+  - MqttBroker.csproj
+  - MqttPublisher.csproj
+  - MqttReceiver.csproj
 
 ### MqttBroker
 MQTTプロコル通信でのブローカーのふるまいをするコンソールアプリケーション
